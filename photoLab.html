@@ -33,12 +33,12 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
             position: fixed;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             padding-top: var(--safe-area-top);
-            padding-bottom: var(--safe-area-bottom);
         }
 
         /* Top Header */
@@ -111,6 +111,7 @@
             align-items: center;
             justify-content: center;
             background: radial-gradient(circle, #1a1a22 0%, #0a0a0c 100%);
+            min-height: 0;
         }
 
         #canvas-container {
@@ -160,6 +161,8 @@
             display: flex;
             flex-direction: column;
             z-index: 10;
+            flex-shrink: 0;
+            padding-bottom: var(--safe-area-bottom);
         }
 
         .context-menu {
@@ -445,7 +448,6 @@
 </head>
 <body>
 
-    <!-- Top Navigation Header -->
     <header>
         <div class="header-actions">
             <button class="btn-icon" id="btn-undo" disabled title="Undo">
@@ -464,14 +466,11 @@
         </div>
     </header>
 
-    <!-- Main Viewport Area -->
     <div id="workspace">
-        <!-- Floating Live Histogram Box -->
         <div id="histogram-container">
             <canvas id="histogramCanvas"></canvas>
         </div>
 
-        <!-- Dynamic Visual Crop Frame overlay Box -->
         <div id="crop-overlay">
             <div class="crop-grid-line-h" style="top: 33.33%;"></div>
             <div class="crop-grid-line-h" style="top: 66.66%;"></div>
@@ -479,12 +478,10 @@
             <div class="crop-grid-line-v" style="left: 66.66%;"></div>
         </div>
 
-        <!-- Main Display Canvas container wrapper -->
         <div id="canvas-container">
             <canvas id="mainCanvas"></canvas>
         </div>
 
-        <!-- Empty State UI Cover -->
         <div id="empty-state">
             <div class="upload-circle">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -498,14 +495,11 @@
         </div>
     </div>
 
-    <!-- Hidden Native File Inputs -->
     <input type="file" id="file-input-gallery" accept="image/jpeg,image/png,image/webp" class="hidden">
     <input type="file" id="file-input-camera" accept="image/jpeg,image/png,image/webp" capture="environment" class="hidden">
 
-    <!-- Bottom Editing Control Systems Panel -->
     <div id="control-panel">
         
-        <!-- Context Sliders / Curves Area / Crop Area Panels -->
         <div class="context-menu" id="panel-adjust">
             <div class="sub-tabs">
                 <button class="sub-tab-btn active" data-target="adj-sub-light">Light</button>
@@ -647,7 +641,7 @@
                     <button class="action-btn c-crop-btn" data-ratio="1:1">1:1</button>
                     <button class="action-btn c-crop-btn" data-ratio="4:3">4:3</button>
                     <button class="action-btn c-crop-btn" data-ratio="16:9">16:9</button>
-                    <button class="action-btn id-apply-crop" style="background: var(--accent);">Apply</button>
+                    <button class="action-btn id-apply-crop" style="background: var(--accent); color: white; border: none;">Apply</button>
                 </div>
             </div>
         </div>
@@ -656,7 +650,6 @@
             <div class="filter-scroll" id="filter-container-list"></div>
         </div>
 
-        <!-- Main Category Dock -->
         <nav id="main-dock">
             <div class="dock-item active" data-panel="panel-adjust">
                 <svg viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 4v16c4.418 0 8-3.582 8-8s-3.582-8-8-8z"/></svg>
@@ -685,7 +678,6 @@
         </nav>
     </div>
 
-    <!-- Export Configurations Dialog Modal Box -->
     <div class="modal" id="export-modal">
         <div class="modal-content">
             <div class="modal-title">Export Parameters</div>
@@ -707,7 +699,6 @@
         </div>
     </div>
 
-    <!-- Core Pipeline & Event Logic Implementation Script -->
     <script>
         let state = {
             brightness: 0, contrast: 0, saturation: 0, exposure: 0,
@@ -831,6 +822,7 @@
             document.getElementById('btn-export-cancel').addEventListener('click', () => {
                 document.getElementById('export-modal').style.display = 'none';
             });
+            document.getElementById('btn-export-confirm').addEventListener('executeImageDownloadExport', executeImageDownloadExport);
             document.getElementById('btn-export-confirm').addEventListener('click', executeImageDownloadExport);
 
             let fmtJpeg = document.getElementById('btn-fmt-jpeg');
