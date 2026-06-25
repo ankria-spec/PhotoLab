@@ -41,6 +41,16 @@
             padding-top: var(--safe-area-top);
         }
 
+        /* Splash Screen Overlay */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            background: #0a0a0c url('PhotoLab_bck.png') no-repeat center center / cover;
+            z-index: 9999;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none; /* מונע אינטראקציה בזמן שהוא מוצג */
+        }
+
         /* Top Header */
         header {
             height: 54px;
@@ -404,7 +414,8 @@
             padding: 32px;
             text-align: center;
             z-index: 6;
-            background: var(--bg-primary);
+            /* שכבת גרדיאנט כהה מעל תמונת הרקע כדי לשמור על קריאות כפתורי הממשק והטקסט */
+            background: linear-gradient(rgba(10, 10, 12, 0.75), rgba(10, 10, 12, 0.75)), url('PhotoLab_bck.png') no-repeat center center / cover;
         }
         .upload-circle {
             width: 80px;
@@ -447,6 +458,8 @@
     </style>
 </head>
 <body>
+
+    <div id="splash-screen"></div>
 
     <header>
         <div class="header-actions">
@@ -758,6 +771,16 @@
             setupViewportInteractions();
             setupCurvesInteraction();
             pushHistoryState();
+
+            // טיימר ייעודי להעלמת מסך הפתיחה לאחר 3 שניות (3000 מילישניות)
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                if (splash) {
+                    splash.style.opacity = '0';
+                    // הסרה מלאה מה-DOM לאחר סיום האנימציה
+                    setTimeout(() => splash.remove(), 500);
+                }
+            }, 3000);
         });
 
         function initUI() {
