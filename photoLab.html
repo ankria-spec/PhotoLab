@@ -134,18 +134,17 @@
             object-fit: contain;
         }
 
-        /* Floating Overlays */
+        /* Floating Overlays - Updated to fill the top quarter width */
         #histogram-container {
             position: absolute;
-            top: 12px;
-            left: 12px;
-            width: 120px;
-            height: 75px;
-            background: rgba(22, 22, 26, 0.75);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 25%;
+            background: linear-gradient(to bottom, rgba(14, 14, 18, 0.85) 0%, rgba(14, 14, 18, 0.4) 80%, transparent 100%);
+            border-bottom: 1px solid rgba(44, 44, 49, 0.3);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             pointer-events: none;
             z-index: 5;
             display: none;
@@ -154,6 +153,7 @@
         #histogramCanvas {
             width: 100%;
             height: 100%;
+            display: block;
         }
 
         /* Control Panel System */
@@ -179,7 +179,7 @@
             display: flex;
         }
 
-        /* Sub-navigation inside menus if needed */
+        /* Sub-navigation inside menus */
         .sub-tabs {
             display: flex;
             gap: 8px;
@@ -457,6 +457,7 @@
 </head>
 <body>
 
+    <!-- Top Navigation Header -->
     <header>
         <div class="header-actions">
             <button class="btn-icon" id="btn-undo" disabled title="Undo">
@@ -475,11 +476,14 @@
         </div>
     </header>
 
+    <!-- Main Viewport Area -->
     <div id="workspace">
+        <!-- Floating Live Histogram Box - Now full width at the top quarter -->
         <div id="histogram-container">
             <canvas id="histogramCanvas"></canvas>
         </div>
 
+        <!-- Dynamic Visual Crop Frame overlay Box -->
         <div id="crop-overlay">
             <div class="crop-grid-line-h" style="top: 33.33%;"></div>
             <div class="crop-grid-line-h" style="top: 66.66%;"></div>
@@ -487,10 +491,12 @@
             <div class="crop-grid-line-v" style="left: 66.66%;"></div>
         </div>
 
+        <!-- Main Display Canvas container wrapper -->
         <div id="canvas-container">
             <canvas id="mainCanvas"></canvas>
         </div>
 
+        <!-- Empty State UI Cover -->
         <div id="empty-state">
             <div class="upload-circle">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -504,11 +510,15 @@
         </div>
     </div>
 
+    <!-- Hidden Native File Inputs -->
     <input type="file" id="file-input-gallery" accept="image/jpeg,image/png,image/webp" class="hidden">
     <input type="file" id="file-input-camera" accept="image/jpeg,image/png,image/webp" capture="environment" class="hidden">
 
+    <!-- Bottom Editing Control Systems Panel -->
     <div id="control-panel">
         
+        <!-- Context Sliders / Curves Area / Crop Area Panels -->
+        <!-- 1. Basic Adjustments Panel -->
         <div class="context-menu" id="panel-adjust">
             <div class="sub-tabs">
                 <button class="sub-tab-btn active" data-target="adj-sub-light">Light</button>
@@ -570,6 +580,7 @@
             </div>
         </div>
 
+        <!-- 2. Black & White Monochromatic Slider Panel -->
         <div class="context-menu" id="panel-bw">
             <div class="slider-group">
                 <div class="slider-label-row"><span>Monochrome Blend Intensity</span><span class="slider-value" id="val-bwIntensity">0%</span></div>
@@ -577,6 +588,7 @@
             </div>
         </div>
 
+        <!-- 3. Levels Adjustments Panel -->
         <div class="context-menu" id="panel-levels">
             <div class="slider-group">
                 <div class="slider-label-row"><span>Black Point</span><span class="slider-value" id="val-levelBlack">0</span></div>
@@ -596,6 +608,7 @@
             </div>
         </div>
 
+        <!-- 4. Parametric Curves Editor Panel -->
         <div class="context-menu" id="panel-curves">
             <div class="curves-ui-container">
                 <div id="curvesWrapper">
@@ -613,6 +626,7 @@
             </div>
         </div>
 
+        <!-- 5. Geometric Transforms and Crops Panel -->
         <div class="context-menu" id="panel-transform">
             <div class="sub-tabs">
                 <button class="sub-tab-btn active" data-target="trans-sub-rotate">Rotate / Flip</button>
@@ -655,11 +669,14 @@
             </div>
         </div>
 
+        <!-- 6. Artistic Filters Engine Panel -->
         <div class="context-menu" id="panel-filters">
             <div class="filter-scroll" id="filter-container-list">
-                </div>
+                <!-- Dynamically generated via JS logic -->
+            </div>
         </div>
 
+        <!-- Main Category Dock -->
         <nav id="main-dock">
             <div class="dock-item active" data-panel="panel-adjust">
                 <svg viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 4v16c4.418 0 8-3.582 8-8s-3.582-8-8-8z"/></svg>
@@ -688,6 +705,7 @@
         </nav>
     </div>
 
+    <!-- Export Configurations Dialog Modal Box -->
     <div class="modal" id="export-modal">
         <div class="modal-content">
             <div class="modal-title">Export Parameters</div>
@@ -709,6 +727,7 @@
         </div>
     </div>
 
+    <!-- Core Pipeline & Event Logic Implementation Script -->
     <script>
         // System Application State Variables
         let state = {
@@ -758,15 +777,14 @@
         const FILTERS = {
             'Natural': null,
             'Vivid': (r,g,b) => {
-                // Boost saturation and contrast safely
                 let factor = 1.2;
                 let cR = (r - 128) * factor + 128;
                 let cG = (g - 128) * factor + 128;
                 let cB = (b - 128) * factor + 128;
                 return [cR * 1.1, cG * 1.1, cB * 1.05];
             },
-            'Portrait': (r,g,b) => [r * 1.08, g * 1.02, b * 0.95], // Warming skin-tones
-            'Landscape': (r,g,b) => [r * 0.95, g * 1.1, b * 1.05], // Vibrant foliage/sky
+            'Portrait': (r,g,b) => [r * 1.08, g * 1.02, b * 0.95],
+            'Landscape': (r,g,b) => [r * 0.95, g * 1.1, b * 1.05],
             'Vintage': (r,g,b) => [r * 0.95 + 40, g * 0.9 + 20, b * 0.8 + 10],
             'Film': (r,g,b) => {
                 let r2 = r < 128 ? Math.pow(r/128, 1.2)*128 : 255 - Math.pow((255-r)/128, 1.2)*128;
@@ -793,7 +811,7 @@
             initUI();
             setupViewportInteractions();
             setupCurvesInteraction();
-            pushHistoryState(); // Baseline internal setup
+            pushHistoryState();
         });
 
         function initUI() {
@@ -807,10 +825,8 @@
                     const targetMenu = document.getElementById(item.dataset.panel);
                     if(targetMenu) targetMenu.classList.add('active');
                     
-                    // Specific execution on curves UI exposure
                     if(item.dataset.panel === 'panel-curves') drawCurvesGraph();
                     
-                    // Show historical bounding box frame logic if under crop submenu target layout
                     evalCropOverlayVisualVisibility();
                 });
             });
@@ -861,7 +877,7 @@
             document.getElementById('btn-redo').addEventListener('click', handleRedo);
             document.getElementById('btn-revert').addEventListener('click', handleRevertAll);
 
-            // Filter Track Generation dynamically mapping the UI cards array structure
+            // Filter Track Generation
             generateFilterCards();
 
             // Export Dialog Configuration Buttons
@@ -891,7 +907,7 @@
                 document.getElementById('val-exportQuality').innerText = e.target.value + '%';
             });
 
-            // Crop Interaction configuration buttons layout array
+            // Crop Interaction configuration buttons
             document.querySelectorAll('.c-crop-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.c-crop-btn').forEach(b => b.classList.remove('active'));
@@ -949,9 +965,7 @@
                 }
             });
 
-            // Re-render curves layout view visually
             drawCurvesGraph();
-            // Sync active visual layout configuration filter selection frame highlight border
             document.querySelectorAll('.filter-card').forEach(card => {
                 if(card.dataset.filter === state.activeFilter) card.classList.add('active');
                 else card.classList.remove('active');
@@ -1031,7 +1045,6 @@
         // --- Viewport Transforms & Gesture Interactions Matrix Logic ---
 
         function setupViewportInteractions() {
-            // Mouse & Touch events unified mechanics mapping structures
             workspace.addEventListener('mousedown', (e) => {
                 if(!originalImage) return;
                 isDraggingViewport = true;
@@ -1048,7 +1061,6 @@
 
             window.addEventListener('mouseup', () => { isDraggingViewport = false; });
 
-            // Advanced Precise Touch Gesture Event Handlers (Pinch Zoom & Direct Pan)
             workspace.addEventListener('touchstart', (e) => {
                 if(!originalImage) return;
                 if(e.touches.length === 1) {
@@ -1088,19 +1100,15 @@
             return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
         }
 
+        // Updated to fill the exact full width of the screen workspace
         function resetViewportPositioning() {
             if(!originalImage) return;
             const wsW = workspace.clientWidth;
-            const wsH = workspace.clientHeight;
             
-            // Calculate base visual sizing checking bounding limitations box
             let isRotated = (state.rotation90 % 2 !== 0);
             let imgW = isRotated ? originalImage.height : originalImage.width;
-            let imgH = isRotated ? originalImage.width : originalImage.height;
 
-            let scaleX = (wsW - 40) / imgW;
-            let scaleY = (wsH - 40) / imgH;
-            zoomScale = Math.min(scaleX, scaleY, 1.0); // Fit completely into workspace space safely
+            zoomScale = wsW / imgW; // Perfect match to screen width
             panX = 0; panY = 0;
             applyViewportTransformCSS();
         }
@@ -1110,7 +1118,7 @@
             evalCropOverlayVisualVisibility();
         }
 
-        // --- Deep Pixel Level Processing Graphics Rendering Pipeline Engine Engine ---
+        // --- Deep Pixel Level Processing Graphics Rendering Pipeline Engine ---
 
         function requestRender() {
             if (renderRequested) return;
@@ -1125,7 +1133,6 @@
             if(!originalImage || isProcessing) return;
             isProcessing = true;
 
-            // Step 1: Initialize canvas sizes mapping geometry state rotations configuration completely
             let isRotated = (state.rotation90 % 2 !== 0);
             let targetW = isRotated ? originalImage.height : originalImage.width;
             let targetH = isRotated ? originalImage.width : originalImage.height;
@@ -1135,11 +1142,9 @@
                 mainCanvas.height = targetH;
             }
 
-            // Step 2: Render base geometry alignment transformation orientations safely onto presentation context
             mainCtx.clearRect(0, 0, targetW, targetH);
             mainCtx.save();
             
-            // Move center point orientation reference context safely
             mainCtx.translate(targetW / 2, targetH / 2);
             mainCtx.rotate((state.rotation90 * 90 * Math.PI) / 180);
             mainCtx.rotate((state.fineRotate * Math.PI) / 180);
@@ -1151,29 +1156,24 @@
             mainCtx.drawImage(originalImage, -originalImage.width / 2, -originalImage.height / 2);
             mainCtx.restore();
 
-            // Step 3: Extract raster byte stream data buffers for software core mathematical shading executions
             let imgData = mainCtx.getImageData(0, 0, targetW, targetH);
             let pixels = imgData.data;
             let totalLen = pixels.length;
 
-            // Generate Functional Math Optimization Maps arrays to accelerate CPU calculations loops
             const lutR = new Uint8Array(256);
             const lutG = new Uint8Array(256);
             const lutB = new Uint8Array(256);
 
-            // Generate evaluation arrays for parametric channel splines
             const curveMapR = evaluateSplineLUT(state.curves.r);
             const curveMapG = evaluateSplineLUT(state.curves.g);
             const curveMapB = evaluateSplineLUT(state.curves.b);
             const curveMapRGB = evaluateSplineLUT(state.curves.rgb);
 
-            // Precomputations variables for standard Basic Math Adjustments
             let expFactor = Math.pow(2, state.exposure);
             let br = state.brightness;
             let contrastFactor = (259 * (state.contrast + 255)) / (255 * (259 - state.contrast));
             let gammaExp = state.gamma;
             
-            // Levels optimization equations variables definitions
             let lBlack = state.levelBlack;
             let lWhite = state.levelWhite;
             let lMid = state.levelMidtones;
@@ -1181,26 +1181,20 @@
             let range = Math.max(1, lWhite - lBlack);
 
             for(let i=0; i<256; i++) {
-                // Initialize clean channel baseline processing pass pipelines safely
                 let r = i, g = i, b = i;
 
-                // 1. Exposure & Levels Manipulation Shifting Math Calculations
                 r = Math.min(255, Math.max(0, (r * expFactor) + lShift));
                 g = Math.min(255, Math.max(0, (g * expFactor) + lShift));
                 b = Math.min(255, Math.max(0, (b * expFactor) + lShift));
 
-                // Black & White dynamic point stretching algorithms calculations mapping
                 r = 255 * Math.pow(Math.max(0, r - lBlack) / range, lMid);
                 g = 255 * Math.pow(Math.max(0, g - lBlack) / range, lMid);
                 b = 255 * Math.pow(Math.max(0, b - lBlack) / range, lMid);
 
-                // 2. Brightness & General Contrast Scaling
                 r = (r - 128) * contrastFactor + 128 + br;
                 g = (g - 128) * contrastFactor + 128 + br;
                 b = (b - 128) * contrastFactor + 128 + br;
 
-                // 3. Highlight / Shadow extraction curves mappings mapping logic
-                // Simple soft thresholds processing approximations equations
                 if (state.highlights !== 0) {
                     let weight = Math.max(0, (i - 128) / 128);
                     let mult = 1.0 + (state.highlights / 200) * weight;
@@ -1212,7 +1206,6 @@
                     r *= mult; g *= mult; b *= mult;
                 }
 
-                // 4. Color temperature Matrix adjustments and Tint shifting algorithms
                 if (state.temperature !== 0) {
                     r += (state.temperature * 0.4);
                     b -= (state.temperature * 0.4);
@@ -1221,40 +1214,33 @@
                     g += (state.tint * 0.3);
                 }
 
-                // 5. Channel Custom Spline Curves Mapping execution matrices loop
                 r = curveMapRGB[Math.min(255, Math.max(0, curveMapR[Math.min(255, Math.max(0, r))]))];
                 g = curveMapRGB[Math.min(255, Math.max(0, curveMapG[Math.min(255, Math.max(0, g))]))];
                 b = curveMapRGB[Math.min(255, Math.max(0, curveMapB[Math.min(255, Math.max(0, b))]))];
 
-                // 6. Gamma correction mathematical power equation pass step
                 if (gammaExp !== 1.0) {
                     r = 255 * Math.pow(r / 255, gammaExp);
                     g = 255 * Math.pow(g / 255, gammaExp);
                     b = 255 * Math.pow(b / 255, gammaExp);
                 }
 
-                // Hard clamp security safe borders allocation ranges mapping boundaries arrays
                 lutR[i] = Math.min(255, Math.max(0, r));
                 lutG[i] = Math.min(255, Math.max(0, g));
                 lutB[i] = Math.min(255, Math.max(0, b));
             }
 
-            // Target Active Artistic Filters functions variables evaluations caches mapping setup
             const activeFilterFn = FILTERS[state.activeFilter];
             let bwIntensityFactor = state.bwIntensity / 100;
 
-            // Primary Fast Pixel Rendering Iteration Loop Map
             for(let i = 0; i < totalLen; i += 4) {
                 let r = lutR[pixels[i]];
                 let g = lutG[pixels[i+1]];
                 let b = lutB[pixels[i+2]];
 
-                // Apply active filter math matrices if populated
                 if (activeFilterFn) {
                     [r, g, b] = activeFilterFn(r, g, b);
                 }
 
-                // Fast Vibrance approximation algorithm processing execution
                 if (state.vibrance !== 0) {
                     let max = Math.max(r, g, b);
                     let avg = (r + g + b) / 3;
@@ -1265,7 +1251,6 @@
                     b += (max - b) * factor;
                 }
 
-                // Dynamic Saturation processing execution loop equations
                 if (state.saturation !== 0) {
                     let lum = 0.299 * r + 0.587 * g + 0.114 * b;
                     let satFactor = 1.0 + (state.saturation / 100);
@@ -1274,7 +1259,6 @@
                     b = lum + (b - lum) * satFactor;
                 }
 
-                // Smooth Continuous Monochromatic Black & White slider blend interface step
                 if (bwIntensityFactor > 0) {
                     let grey = 0.299 * r + 0.587 * g + 0.114 * b;
                     r = r + (grey - r) * bwIntensityFactor;
@@ -1282,41 +1266,31 @@
                     b = b + (grey - b) * bwIntensityFactor;
                 }
 
-                // Assign values back down onto active tracking canvas buffer structures
                 pixels[i]   = r > 255 ? 255 : (r < 0 ? 0 : r);
                 pixels[i+1] = g > 255 ? 255 : (g < 0 ? 0 : g);
                 pixels[i+2] = b > 255 ? 255 : (b < 0 ? 0 : b);
             }
 
-            // Step 4: High performance 3x3 Sharpening Convolution Filter implementation matrix pass
             if (state.sharpness > 0) {
-                // Execute deep custom convolution pass utilizing a secondary scratch allocation workspace array context buffer
                 let scratchContainer = mainCtx.createImageData(targetW, targetH);
                 let outPixels = scratchContainer.data;
                 let sharpWeight = (state.sharpness / 100) * 0.5;
                 
-                // Classic Laplacian matrix kernel configuration arrays allocation definitions
-                // [ 0, -1,  0 ]
-                // [ -1, 5, -1 ]
-                // [ 0, -1,  0 ]
                 let kCenter = 1.0 + 4.0 * sharpWeight;
                 let kEdge = -sharpWeight;
 
-                // Optimization: Clone standard baseline borders safely into outputs array memory spaces to prevent distortions
                 outPixels.set(pixels);
 
-                // Run row line passes avoiding edge border crash out conditions boundaries calculations loops
                 for (let y = 1; y < targetH - 1; y++) {
                     for (let x = 1; x < targetW - 1; x++) {
                         let idx = (y * targetW + x) * 4;
                         
-                        // Sample neighboring index coordinates layouts
                         let top  = ((y - 1) * targetW + x) * 4;
                         let btm  = ((y + 1) * targetW + x) * 4;
                         let lft  = (y * targetW + (x - 1)) * 4;
                         let rgt  = (y * targetW + (x + 1)) * 4;
 
-                        for (let c = 0; c < 3; c++) { // Apply safely to RGB bytes streams respectively
+                        for (let c = 0; c < 3; c++) {
                             let val = pixels[idx+c] * kCenter + 
                                       (pixels[top+c] + pixels[btm+c] + pixels[lft+c] + pixels[rgt+c]) * kEdge;
                             outPixels[idx+c] = val > 255 ? 255 : (val < 0 ? 0 : val);
@@ -1326,16 +1300,14 @@
                 imgData = scratchContainer;
             }
 
-            // Commit final buffer maps back down directly onto hardware layer surface configurations context
             mainCtx.putImageData(imgData, 0, 0);
 
-            // Compute and refresh floating analytics live histogram displays synchronously array mappings
             calculateLiveHistogram(imgData.data);
 
             isProcessing = false;
         }
 
-        // --- Multi-Channel Live Histogram Analysis Graphics Core Engine ---
+        // --- Multi-Channel Live Histogram Analysis Engine ---
 
         function calculateLiveHistogram(pixelArray) {
             const rHist = new Uint32Array(256);
@@ -1353,7 +1325,6 @@
                 rHist[r]++; gHist[g]++; bHist[b]++; lHist[lum]++;
             }
 
-            // Find max threshold ceiling boundary allocation limits value to scale graphics displays perfectly inside visualization layouts box
             let maxCount = 0;
             for(let i=0; i<256; i++) {
                 if(rHist[i] > maxCount) maxCount = rHist[i];
@@ -1362,18 +1333,17 @@
                 if(lHist[i] > maxCount) maxCount = lHist[i];
             }
 
-            // Render live graphs metrics onto visualization overlay context panels structures
-            const w = histogramCanvas.width = 120;
-            const h = histogramCanvas.height = 75;
+            // Updated: Dynamically scales to fill full width and top quarter of workspace
+            const w = histogramCanvas.width = workspace.clientWidth;
+            const h = histogramCanvas.height = workspace.clientHeight * 0.25;
             histCtx.clearRect(0, 0, w, h);
 
-            // Establish blending composition parameters inside overlay canvas layouts structures safely
             histCtx.globalCompositeOperation = 'screen';
             
             drawHistogramChannelGraph(rHist, '#ff453a', maxCount, w, h);
             drawHistogramChannelGraph(gHist, '#30d158', maxCount, w, h);
             drawHistogramChannelGraph(bHist, '#0a84ff', maxCount, w, h);
-            drawHistogramChannelGraph(lHist, '#ffffff', maxCount, w, h, true); // Dotted line style for luminance values track
+            drawHistogramChannelGraph(lHist, '#ffffff', maxCount, w, h, true);
         }
 
         function drawHistogramChannelGraph(data, color, maxVal, width, height, isDash = false) {
@@ -1392,10 +1362,9 @@
             histCtx.stroke();
         }
 
-        // --- Parametric Custom Curves Editor Engineering Tool System Mechanics ---
+        // --- Parametric Custom Curves Editor Tool ---
 
         function setupCurvesInteraction() {
-            // Dynamic multi tab color channels configuration controls listeners logic array maps
             document.querySelectorAll('[data-curve-channel]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     btn.closest('.sub-tabs').querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
@@ -1412,7 +1381,6 @@
                 requestRender();
             });
 
-            // Interactive coordinate node targeting drag event mechanics loops setup maps
             let isDraggingPoint = false;
             let activePointIndex = -1;
 
@@ -1423,10 +1391,8 @@
                 const clickY = (1.0 - ((touch.clientY - rect.top) / rect.height)) * 255;
 
                 let pts = state.curves[currentCurveChannel];
-                // Check if targeting/clicking an existing point coordinate range safely
                 activePointIndex = pts.findIndex(pt => Math.hypot(pt[0] - clickX, pt[1] - clickY) < 22);
 
-                // If clicking an empty curve vector line segments region segment path, generate a new node coordinate safely
                 if(activePointIndex === -1 && pts.length < 8) {
                     pts.push([clickX, clickY]);
                     pts.sort((a,b) => a[0] - b[0]);
@@ -1443,17 +1409,14 @@
                 let targetX = ((touch.clientX - rect.left) / rect.width) * 255;
                 let targetY = (1.0 - ((touch.clientY - rect.top) / rect.height)) * 255;
 
-                // Safeguard range constraints allocations configurations boundaries values maps
                 targetX = Math.min(255, Math.max(0, targetX));
                 targetY = Math.min(255, Math.max(0, targetY));
 
                 let pts = state.curves[currentCurveChannel];
                 
-                // Lock anchor endpoints vector components safely from migrating along horizontal axes matrix maps
                 if(activePointIndex === 0) targetX = 0;
                 if(activePointIndex === pts.length - 1) targetX = 255;
 
-                // Check and enforce sequence bounds to prevent self-intersecting loops loop conditions
                 if(activePointIndex > 0 && targetX <= pts[activePointIndex-1][0]) targetX = pts[activePointIndex-1][0] + 1;
                 if(activePointIndex < pts.length - 1 && targetX >= pts[activePointIndex+1][0]) targetX = pts[activePointIndex+1][0] - 1;
 
@@ -1474,7 +1437,6 @@
             const h = curvesCanvasEl.height = 140;
             curvesCtx.clearRect(0,0,w,h);
 
-            // Draw clean background layout guides matrix lines layout
             curvesCtx.strokeStyle = '#2c2c31';
             curvesCtx.lineWidth = 1;
             curvesCtx.beginPath();
@@ -1482,7 +1444,6 @@
             curvesCtx.moveTo(0, h/2); curvesCtx.lineTo(w, h/2);
             curvesCtx.stroke();
 
-            // Render parametric pre-evaluated lookup trajectory splines line track path
             let pts = state.curves[currentCurveChannel];
             let splineMap = evaluateSplineLUT(pts);
 
@@ -1500,7 +1461,6 @@
             }
             curvesCtx.stroke();
 
-            // Render small node circles around active drag control coordinates point anchors safely
             pts.forEach((pt, idx) => {
                 let cx = (pt[0] / 255) * w;
                 let cy = (1.0 - (pt[1] / 255)) * h;
@@ -1514,12 +1474,9 @@
             });
         }
 
-        // Fast Monotonic Cubic Spline / Linear Interpolation Curve Generator Mathematics Mapping Engine
         function evaluateSplineLUT(points) {
             let lut = new Uint8Array(256);
-            // Fallback fallback handling to standard linear sequence processing maps safely if insufficient coordinates nodes exist
             for (let i = 0; i < 256; i++) {
-                // Discover bounded segment range
                 let j = 0;
                 while (j < points.length - 1 && points[j+1][0] < i) { j++; }
                 
@@ -1544,7 +1501,6 @@
                 return;
             }
 
-            // Sync visual positioning with current bounding canvas coordinates location boxes directly
             const canvasRect = mainCanvas.getBoundingClientRect();
             const workspaceRect = workspace.getBoundingClientRect();
 
@@ -1553,7 +1509,6 @@
             let targetWidth = canvasRect.width;
             let targetHeight = canvasRect.height;
 
-            // Constrain bounding dimension if a hard coded aspect locked aspect ratio selection is operational
             if (state.cropRatio === '1:1') {
                 let size = Math.min(targetWidth, targetHeight);
                 targetLeft += (targetWidth - size)/2; targetTop += (targetHeight - size)/2;
@@ -1582,7 +1537,6 @@
         function executeCropSlicingTransformation() {
             if(!originalImage) return;
 
-            // Determine dimensions back onto source space coordinate matrix systems
             const canvasRect = mainCanvas.getBoundingClientRect();
             const overlayRect = document.getElementById('crop-overlay').getBoundingClientRect();
 
@@ -1594,23 +1548,19 @@
             let cropW = overlayRect.width * scaleFactorX;
             let cropH = overlayRect.height * scaleFactorY;
 
-            // Ensure valid bounds
             cropX = Math.max(0, cropX); cropY = Math.max(0, cropY);
             cropW = Math.min(mainCanvas.width - cropX, cropW);
             cropH = Math.min(mainCanvas.height - cropY, cropH);
 
             if(cropW < 10 || cropH < 10) return;
 
-            // Instantiate a secondary standalone offline scratch crop buffer processing container surface execution
             const cropCanvas = document.createElement('canvas');
             cropCanvas.width = cropW;
             cropCanvas.height = cropH;
             const cropCtx = cropCanvas.getContext('2d');
             
-            // Slice target processed visual regions directly down out of main canvas context
             cropCtx.drawImage(mainCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
-            // Re-instantiate base tracking references down to point directly onto the new cropped source surface assets maps
             const croppedImg = new Image();
             croppedImg.onload = function() {
                 originalImage = croppedImg;
@@ -1624,18 +1574,15 @@
             croppedImg.src = cropCanvas.toDataURL('image/png');
         }
 
-        // --- Efficient Undo / Redo Pipeline State Engine System Layout ---
+        // --- Efficient Undo / Redo Pipeline State Engine System ---
 
         function pushHistoryState() {
-            // Drop forward redo historical states if editing chain diverges from past baselines layout tracking markers
             if(historyIndex < historyStack.length - 1) {
                 historyStack = historyStack.slice(0, historyIndex + 1);
             }
 
-            // High efficiency serialization deep clone operation execution pattern structures mapping arrays
             const stateSnapshotStr = JSON.stringify(state);
             
-            // Enforce upper maximum size boundary limits allocation ceiling constraints on memory array tracking allocations stacks context
             if(historyStack.length >= 30) { historyStack.shift(); }
 
             historyStack.push(stateSnapshotStr);
@@ -1673,7 +1620,7 @@
             document.getElementById('btn-redo').disabled = (historyIndex >= historyStack.length - 1);
         }
 
-        // --- Compressed High Quality File Export Downloader Output Subsystems Engine ---
+        // --- Compressed High Quality File Export Downloader Output Subsystems ---
 
         function executeImageDownloadExport() {
             if(!originalImage) return;
@@ -1682,7 +1629,6 @@
             let mimeType = isPng ? 'image/png' : 'image/jpeg';
             let qualityScore = parseFloat(document.getElementById('sld-exportQuality').value) / 100;
 
-            // Generate temporary physical link element container anchors layout to force device system downloads tracking triggers
             let dataUrl = mainCanvas.toDataURL(mimeType, isPng ? undefined : qualityScore);
             
             let downloadAnchor = document.createElement('a');
@@ -1693,7 +1639,6 @@
             downloadAnchor.click();
             document.body.removeChild(downloadAnchor);
 
-            // Close dialog overlay layer windows panel container configurations structures
             document.getElementById('export-modal').style.display = 'none';
         }
     </script>
