@@ -127,14 +127,11 @@
             cursor: grabbing;
         }
 
-        canvas {
-            max-width: 100%;
-            max-height: 100%;
+        #mainCanvas {
             display: block;
-            object-fit: contain;
         }
 
-        /* Floating Overlays - Updated to fill the top quarter width */
+        /* Floating Overlays - Histogram Top Quarter */
         #histogram-container {
             position: absolute;
             top: 0;
@@ -179,7 +176,6 @@
             display: flex;
         }
 
-        /* Sub-navigation inside menus */
         .sub-tabs {
             display: flex;
             gap: 8px;
@@ -223,12 +219,6 @@
         .slider-value {
             color: var(--accent);
             font-variant-numeric: tabular-nums;
-        }
-
-        .slider-input-wrapper {
-            display: flex;
-            align-items: center;
-            position: relative;
         }
 
         input[type="range"] {
@@ -327,7 +317,6 @@
             font-size: 10px;
             color: #555;
             font-weight: bold;
-            position: relative;
         }
         .filter-card.active .filter-thumb {
             border-color: var(--accent);
@@ -451,7 +440,6 @@
         }
         .modal-title { font-size: 16px; font-weight: 600; text-align: center;}
 
-        /* Utility classes */
         .hidden { display: none !important; }
     </style>
 </head>
@@ -478,7 +466,7 @@
 
     <!-- Main Viewport Area -->
     <div id="workspace">
-        <!-- Floating Live Histogram Box - Now full width at the top quarter -->
+        <!-- Floating Live Histogram Box -->
         <div id="histogram-container">
             <canvas id="histogramCanvas"></canvas>
         </div>
@@ -518,7 +506,6 @@
     <div id="control-panel">
         
         <!-- Context Sliders / Curves Area / Crop Area Panels -->
-        <!-- 1. Basic Adjustments Panel -->
         <div class="context-menu" id="panel-adjust">
             <div class="sub-tabs">
                 <button class="sub-tab-btn active" data-target="adj-sub-light">Light</button>
@@ -580,7 +567,6 @@
             </div>
         </div>
 
-        <!-- 2. Black & White Monochromatic Slider Panel -->
         <div class="context-menu" id="panel-bw">
             <div class="slider-group">
                 <div class="slider-label-row"><span>Monochrome Blend Intensity</span><span class="slider-value" id="val-bwIntensity">0%</span></div>
@@ -588,7 +574,6 @@
             </div>
         </div>
 
-        <!-- 3. Levels Adjustments Panel -->
         <div class="context-menu" id="panel-levels">
             <div class="slider-group">
                 <div class="slider-label-row"><span>Black Point</span><span class="slider-value" id="val-levelBlack">0</span></div>
@@ -608,7 +593,6 @@
             </div>
         </div>
 
-        <!-- 4. Parametric Curves Editor Panel -->
         <div class="context-menu" id="panel-curves">
             <div class="curves-ui-container">
                 <div id="curvesWrapper">
@@ -626,7 +610,6 @@
             </div>
         </div>
 
-        <!-- 5. Geometric Transforms and Crops Panel -->
         <div class="context-menu" id="panel-transform">
             <div class="sub-tabs">
                 <button class="sub-tab-btn active" data-target="trans-sub-rotate">Rotate / Flip</button>
@@ -669,11 +652,8 @@
             </div>
         </div>
 
-        <!-- 6. Artistic Filters Engine Panel -->
         <div class="context-menu" id="panel-filters">
-            <div class="filter-scroll" id="filter-container-list">
-                <!-- Dynamically generated via JS logic -->
-            </div>
+            <div class="filter-scroll" id="filter-container-list"></div>
         </div>
 
         <!-- Main Category Dock -->
@@ -729,7 +709,6 @@
 
     <!-- Core Pipeline & Event Logic Implementation Script -->
     <script>
-        // System Application State Variables
         let state = {
             brightness: 0, contrast: 0, saturation: 0, exposure: 0,
             gamma: 1.0, sharpness: 0, vibrance: 0, highlights: 0, shadows: 0,
@@ -739,21 +718,17 @@
             activeFilter: 'Natural',
             cropRatio: 'free',
             curves: {
-                rgb: [[0,0], [255,255]],
-                r: [[0,0], [255,255]],
-                g: [[0,0], [255,255]],
-                b: [[0,0], [255,255]]
+                rgb: [[0,0], [255,255]], r: [[0,0], [255,255]], g: [[0,0], [255,255]], b: [[0,0], [255,255]]
             }
         };
 
         let currentCurveChannel = 'rgb';
-        let originalImage = null; // Stored source HTMLImageElement
+        let originalImage = null;
         let historyStack = [];
         let historyIndex = -1;
         let isProcessing = false;
         let renderRequested = false;
 
-        // Interactive Viewport State variables
         let zoomScale = 1.0;
         let panX = 0, panY = 0;
         let isDraggingViewport = false;
@@ -762,7 +737,6 @@
         let startPinchDist = 0;
         let startZoomScale = 1.0;
 
-        // Native DOM Cache Elements
         const mainCanvas = document.getElementById('mainCanvas');
         const mainCtx = mainCanvas.getContext('2d', { willReadFrequently: true });
         const canvasContainer = document.getElementById('canvas-container');
@@ -773,39 +747,20 @@
         const curvesCanvasEl = document.getElementById('curvesCanvasEl');
         const curvesCtx = curvesCanvasEl.getContext('2d');
 
-        // Dynamic Built-In Pre-computed Native Filter Matrix Equations
         const FILTERS = {
             'Natural': null,
             'Vivid': (r,g,b) => {
                 let factor = 1.2;
-                let cR = (r - 128) * factor + 128;
-                let cG = (g - 128) * factor + 128;
-                let cB = (b - 128) * factor + 128;
-                return [cR * 1.1, cG * 1.1, cB * 1.05];
+                return [(r - 128) * factor + 128 * 1.1, (g - 128) * factor + 128 * 1.1, (b - 128) * factor + 128 * 1.05];
             },
             'Portrait': (r,g,b) => [r * 1.08, g * 1.02, b * 0.95],
             'Landscape': (r,g,b) => [r * 0.95, g * 1.1, b * 1.05],
             'Vintage': (r,g,b) => [r * 0.95 + 40, g * 0.9 + 20, b * 0.8 + 10],
-            'Film': (r,g,b) => {
-                let r2 = r < 128 ? Math.pow(r/128, 1.2)*128 : 255 - Math.pow((255-r)/128, 1.2)*128;
-                return [r2, g * 0.95 + 10, b * 1.05];
-            },
-            'High Contrast': (r,g,b) => {
-                let f = 1.4;
-                return [(r-128)*f+128, (g-128)*f+128, (b-128)*f+128];
-            },
-            'Black & White': (r,g,b) => {
-                let lum = 0.299 * r + 0.587 * g + 0.114 * b;
-                return [lum, lum, lum];
-            },
-            'Sepia': (r,g,b) => [
-                (r * .393) + (g *.769) + (b * .189),
-                (r * .349) + (g *.686) + (b * .168),
-                (r * .272) + (g *.534) + (b * .131)
-            ]
+            'Film': (r,g,b) => [r < 128 ? Math.pow(r/128, 1.2)*128 : 255 - Math.pow((255-r)/128, 1.2)*128, g * 0.95 + 10, b * 1.05],
+            'High Contrast': (r,g,b) => [(r-128)*1.4+128, (g-128)*1.4+128, (b-128)*1.4+128],
+            'Black & White': (r,g,b) => { let l = 0.299 * r + 0.587 * g + 0.114 * b; return [l, l, l]; },
+            'Sepia': (r,g,b) => [(r * .393) + (g *.769) + (b * .189), (r * .349) + (g *.686) + (b * .168), (r * .272) + (g *.534) + (b * .131)]
         };
-
-        // --- Core Engineering Mechanics Pipeline System ---
 
         window.addEventListener('DOMContentLoaded', () => {
             initUI();
@@ -815,35 +770,28 @@
         });
 
         function initUI() {
-            // Setup Main Navigation Tab Dock Click Event Handlers
             document.querySelectorAll('#main-dock .dock-item').forEach(item => {
                 item.addEventListener('click', () => {
                     document.querySelectorAll('#main-dock .dock-item').forEach(i => i.classList.remove('active'));
                     document.querySelectorAll('.context-menu').forEach(m => m.classList.remove('active'));
-                    
                     item.classList.add('active');
                     const targetMenu = document.getElementById(item.dataset.panel);
                     if(targetMenu) targetMenu.classList.add('active');
-                    
                     if(item.dataset.panel === 'panel-curves') drawCurvesGraph();
-                    
                     evalCropOverlayVisualVisibility();
                 });
             });
 
-            // Dynamic Sub-Tabs Panel Layout Toggling System
             document.querySelectorAll('.sub-tab-btn[data-target]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
+                btn.addEventListener('click', () => {
                     const parent = btn.closest('.context-menu');
                     parent.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
                     parent.querySelectorAll('.sub-panel-content').forEach(p => p.classList.add('hidden'));
-                    
                     btn.classList.add('active');
                     document.getElementById(btn.dataset.target).classList.remove('hidden');
                 });
             });
 
-            // Setup Event Handlers for Slider UI Inputs
             setupSlider('sld-exposure', 'exposure', '', parseFloat);
             setupSlider('sld-brightness', 'brightness', '%', parseInt);
             setupSlider('sld-contrast', 'contrast', '%', parseInt);
@@ -862,25 +810,20 @@
             setupSlider('sld-levelShift', 'levelShift', '', parseInt);
             setupSlider('sld-fineRotate', 'fineRotate', '°', parseFloat);
 
-            // Import Mechanics Inputs File Change Listeners
             document.getElementById('file-input-gallery').addEventListener('change', handleFileImport);
             document.getElementById('file-input-camera').addEventListener('change', handleFileImport);
 
-            // Geometry Transform Application Triggers
             document.getElementById('btn-rot-left').addEventListener('click', () => { state.rotation90 = (state.rotation90 - 1 + 4) % 4; pushHistoryState(); requestRender(); });
             document.getElementById('btn-rot-right').addEventListener('click', () => { state.rotation90 = (state.rotation90 + 1) % 4; pushHistoryState(); requestRender(); });
             document.getElementById('btn-flip-h').addEventListener('click', () => { state.flipH = !state.flipH; pushHistoryState(); requestRender(); });
             document.getElementById('btn-flip-v').addEventListener('click', () => { state.flipV = !state.flipV; pushHistoryState(); requestRender(); });
 
-            // Undo / Redo Click Handlers
             document.getElementById('btn-undo').addEventListener('click', handleUndo);
             document.getElementById('btn-redo').addEventListener('click', handleRedo);
             document.getElementById('btn-revert').addEventListener('click', handleRevertAll);
 
-            // Filter Track Generation
             generateFilterCards();
 
-            // Export Dialog Configuration Buttons
             document.getElementById('btn-export-trigger').addEventListener('click', () => {
                 if(!originalImage) return;
                 document.getElementById('export-modal').style.display = 'flex';
@@ -907,7 +850,6 @@
                 document.getElementById('val-exportQuality').innerText = e.target.value + '%';
             });
 
-            // Crop Interaction configuration buttons
             document.querySelectorAll('.c-crop-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.c-crop-btn').forEach(b => b.classList.remove('active'));
@@ -923,37 +865,25 @@
         function setupSlider(id, stateProperty, suffix, parserFunc) {
             const el = document.getElementById(id);
             const valEl = document.getElementById('val-' + stateProperty);
-            
             el.addEventListener('input', (e) => {
                 const val = parserFunc(e.target.value);
                 state[stateProperty] = val;
                 valEl.innerText = val + suffix;
                 requestRender();
             });
-
-            el.addEventListener('change', () => {
-                pushHistoryState();
-            });
+            el.addEventListener('change', () => { pushHistoryState(); });
         }
 
         function syncSlidersUIFromCurrentState() {
             const properties = [
-                { id: 'sld-exposure', prop: 'exposure', suf: '' },
-                { id: 'sld-brightness', prop: 'brightness', suf: '%' },
-                { id: 'sld-contrast', prop: 'contrast', suf: '%' },
-                { id: 'sld-highlights', prop: 'highlights', suf: '%' },
-                { id: 'sld-shadows', prop: 'shadows', suf: '%' },
-                { id: 'sld-saturation', prop: 'saturation', suf: '%' },
-                { id: 'sld-vibrance', prop: 'vibrance', suf: '%' },
-                { id: 'sld-temperature', prop: 'temperature', suf: '%' },
-                { id: 'sld-tint', prop: 'tint', suf: '%' },
-                { id: 'sld-sharpness', prop: 'sharpness', suf: '%' },
-                { id: 'sld-gamma', prop: 'gamma', suf: '' },
-                { id: 'sld-bwIntensity', prop: 'bwIntensity', suf: '%' },
-                { id: 'sld-levelBlack', prop: 'levelBlack', suf: '' },
-                { id: 'sld-levelMidtones', prop: 'levelMidtones', suf: '' },
-                { id: 'sld-levelWhite', prop: 'levelWhite', suf: '' },
-                { id: 'sld-levelShift', prop: 'levelShift', suf: '' },
+                { id: 'sld-exposure', prop: 'exposure', suf: '' }, { id: 'sld-brightness', prop: 'brightness', suf: '%' },
+                { id: 'sld-contrast', prop: 'contrast', suf: '%' }, { id: 'sld-highlights', prop: 'highlights', suf: '%' },
+                { id: 'sld-shadows', prop: 'shadows', suf: '%' }, { id: 'sld-saturation', prop: 'saturation', suf: '%' },
+                { id: 'sld-vibrance', prop: 'vibrance', suf: '%' }, { id: 'sld-temperature', prop: 'temperature', suf: '%' },
+                { id: 'sld-tint', prop: 'tint', suf: '%' }, { id: 'sld-sharpness', prop: 'sharpness', suf: '%' },
+                { id: 'sld-gamma', prop: 'gamma', suf: '' }, { id: 'sld-bwIntensity', prop: 'bwIntensity', suf: '%' },
+                { id: 'sld-levelBlack', prop: 'levelBlack', suf: '' }, { id: 'sld-levelMidtones', prop: 'levelMidtones', suf: '' },
+                { id: 'sld-levelWhite', prop: 'levelWhite', suf: '' }, { id: 'sld-levelShift', prop: 'levelShift', suf: '' },
                 { id: 'sld-fineRotate', prop: 'fineRotate', suf: '°' }
             ];
 
@@ -1001,8 +931,6 @@
             });
         }
 
-        // --- File System Asset Processing Architecture ---
-
         function handleFileImport(e) {
             const file = e.target.files[0];
             if(!file) return;
@@ -1017,8 +945,9 @@
                     historyStack = [];
                     historyIndex = -1;
                     pushHistoryState();
+                    
+                    executeCoreRenderPipeline(); 
                     resetViewportPositioning();
-                    requestRender();
                 };
                 originalImage.src = event.target.result;
             };
@@ -1035,14 +964,11 @@
                 activeFilter: 'Natural',
                 cropRatio: 'free',
                 curves: {
-                    rgb: [[0,0], [255,255]], r: [[0,0], [255,255]],
-                    g: [[0,0], [255,255]], b: [[0,0], [255,255]]
+                    rgb: [[0,0], [255,255]], r: [[0,0], [255,255]], g: [[0,0], [255,255]], b: [[0,0], [255,255]]
                 }
             };
             syncSlidersUIFromCurrentState();
         }
-
-        // --- Viewport Transforms & Gesture Interactions Matrix Logic ---
 
         function setupViewportInteractions() {
             workspace.addEventListener('mousedown', (e) => {
@@ -1070,7 +996,7 @@
                     startPanX = panX; startPanY = panY;
                 } else if(e.touches.length === 2) {
                     isDraggingViewport = false;
-                    startPinchDist = getTouchDistance(e.touches[0], e.touches[1]);
+                    startPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                     startZoomScale = zoomScale;
                 }
             }, { passive: true });
@@ -1081,34 +1007,24 @@
                     panY = startPanY + (e.touches[0].clientY - startTouchY);
                     applyViewportTransformCSS();
                 } else if(e.touches.length === 2) {
-                    let currentDist = getTouchDistance(e.touches[0], e.touches[1]);
+                    let currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                     if(startPinchDist > 0) {
-                        let factor = currentDist / startPinchDist;
-                        zoomScale = Math.max(0.2, Math.min(8.0, startZoomScale * factor));
+                        zoomScale = Math.max(0.2, Math.min(8.0, startZoomScale * (currentDist / startPinchDist)));
                         applyViewportTransformCSS();
                     }
                 }
             }, { passive: true });
 
-            workspace.addEventListener('touchend', () => {
-                isDraggingViewport = false;
-                startPinchDist = 0;
-            });
+            workspace.addEventListener('touchend', () => { isDraggingViewport = false; startPinchDist = 0; });
         }
 
-        function getTouchDistance(t1, t2) {
-            return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-        }
-
-        // Updated to fill the exact full width of the screen workspace
         function resetViewportPositioning() {
             if(!originalImage) return;
-            const wsW = workspace.clientWidth;
-            
+            const wsW = workspace.clientWidth || window.innerWidth;
             let isRotated = (state.rotation90 % 2 !== 0);
             let imgW = isRotated ? originalImage.height : originalImage.width;
 
-            zoomScale = wsW / imgW; // Perfect match to screen width
+            zoomScale = wsW / imgW; 
             panX = 0; panY = 0;
             applyViewportTransformCSS();
         }
@@ -1117,8 +1033,6 @@
             canvasContainer.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
             evalCropOverlayVisualVisibility();
         }
-
-        // --- Deep Pixel Level Processing Graphics Rendering Pipeline Engine ---
 
         function requestRender() {
             if (renderRequested) return;
@@ -1144,15 +1058,10 @@
 
             mainCtx.clearRect(0, 0, targetW, targetH);
             mainCtx.save();
-            
             mainCtx.translate(targetW / 2, targetH / 2);
             mainCtx.rotate((state.rotation90 * 90 * Math.PI) / 180);
             mainCtx.rotate((state.fineRotate * Math.PI) / 180);
-            
-            let scaleH = state.flipH ? -1 : 1;
-            let scaleV = state.flipV ? -1 : 1;
-            mainCtx.scale(scaleH, scaleV);
-
+            mainCtx.scale(state.flipH ? -1 : 1, state.flipV ? -1 : 1);
             mainCtx.drawImage(originalImage, -originalImage.width / 2, -originalImage.height / 2);
             mainCtx.restore();
 
@@ -1160,139 +1069,74 @@
             let pixels = imgData.data;
             let totalLen = pixels.length;
 
-            const lutR = new Uint8Array(256);
-            const lutG = new Uint8Array(256);
-            const lutB = new Uint8Array(256);
-
-            const curveMapR = evaluateSplineLUT(state.curves.r);
-            const curveMapG = evaluateSplineLUT(state.curves.g);
-            const curveMapB = evaluateSplineLUT(state.curves.b);
-            const curveMapRGB = evaluateSplineLUT(state.curves.rgb);
+            const lutR = new Uint8Array(256), lutG = new Uint8Array(256), lutB = new Uint8Array(256);
+            const curveMapR = evaluateSplineLUT(state.curves.r), curveMapG = evaluateSplineLUT(state.curves.g), curveMapB = evaluateSplineLUT(state.curves.b), curveMapRGB = evaluateSplineLUT(state.curves.rgb);
 
             let expFactor = Math.pow(2, state.exposure);
             let br = state.brightness;
             let contrastFactor = (259 * (state.contrast + 255)) / (255 * (259 - state.contrast));
-            let gammaExp = state.gamma;
-            
-            let lBlack = state.levelBlack;
-            let lWhite = state.levelWhite;
-            let lMid = state.levelMidtones;
-            let lShift = state.levelShift;
-            let range = Math.max(1, lWhite - lBlack);
+            let range = Math.max(1, state.levelWhite - state.levelBlack);
 
             for(let i=0; i<256; i++) {
                 let r = i, g = i, b = i;
+                r = Math.min(255, Math.max(0, (r * expFactor) + state.levelShift));
+                g = Math.min(255, Math.max(0, (g * expFactor) + state.levelShift));
+                b = Math.min(255, Math.max(0, (b * expFactor) + state.levelShift));
 
-                r = Math.min(255, Math.max(0, (r * expFactor) + lShift));
-                g = Math.min(255, Math.max(0, (g * expFactor) + lShift));
-                b = Math.min(255, Math.max(0, (b * expFactor) + lShift));
-
-                r = 255 * Math.pow(Math.max(0, r - lBlack) / range, lMid);
-                g = 255 * Math.pow(Math.max(0, g - lBlack) / range, lMid);
-                b = 255 * Math.pow(Math.max(0, b - lBlack) / range, lMid);
+                r = 255 * Math.pow(Math.max(0, r - state.levelBlack) / range, state.levelMidtones);
+                g = 255 * Math.pow(Math.max(0, g - state.levelBlack) / range, state.levelMidtones);
+                b = 255 * Math.pow(Math.max(0, b - state.levelBlack) / range, state.levelMidtones);
 
                 r = (r - 128) * contrastFactor + 128 + br;
                 g = (g - 128) * contrastFactor + 128 + br;
                 b = (b - 128) * contrastFactor + 128 + br;
 
-                if (state.highlights !== 0) {
-                    let weight = Math.max(0, (i - 128) / 128);
-                    let mult = 1.0 + (state.highlights / 200) * weight;
-                    r *= mult; g *= mult; b *= mult;
-                }
-                if (state.shadows !== 0) {
-                    let weight = Math.max(0, (128 - i) / 128);
-                    let mult = 1.0 + (state.shadows / 200) * weight;
-                    r *= mult; g *= mult; b *= mult;
-                }
-
-                if (state.temperature !== 0) {
-                    r += (state.temperature * 0.4);
-                    b -= (state.temperature * 0.4);
-                }
-                if (state.tint !== 0) {
-                    g += (state.tint * 0.3);
-                }
+                if (state.highlights !== 0) { let w = Math.max(0, (i - 128) / 128); let m = 1.0 + (state.highlights / 200) * w; r *= m; g *= m; b *= m; }
+                if (state.shadows !== 0) { let w = Math.max(0, (128 - i) / 128); let m = 1.0 + (state.shadows / 200) * w; r *= m; g *= m; b *= m; }
+                if (state.temperature !== 0) { r += (state.temperature * 0.4); b -= (state.temperature * 0.4); }
+                if (state.tint !== 0) { g += (state.tint * 0.3); }
 
                 r = curveMapRGB[Math.min(255, Math.max(0, curveMapR[Math.min(255, Math.max(0, r))]))];
                 g = curveMapRGB[Math.min(255, Math.max(0, curveMapG[Math.min(255, Math.max(0, g))]))];
                 b = curveMapRGB[Math.min(255, Math.max(0, curveMapB[Math.min(255, Math.max(0, b))]))];
 
-                if (gammaExp !== 1.0) {
-                    r = 255 * Math.pow(r / 255, gammaExp);
-                    g = 255 * Math.pow(g / 255, gammaExp);
-                    b = 255 * Math.pow(b / 255, gammaExp);
-                }
+                if (state.gamma !== 1.0) { r = 255 * Math.pow(r / 255, state.gamma); g = 255 * Math.pow(g / 255, state.gamma); b = 255 * Math.pow(b / 255, state.gamma); }
 
-                lutR[i] = Math.min(255, Math.max(0, r));
-                lutG[i] = Math.min(255, Math.max(0, g));
-                lutB[i] = Math.min(255, Math.max(0, b));
+                lutR[i] = Math.min(255, Math.max(0, r)); lutG[i] = Math.min(255, Math.max(0, g)); lutB[i] = Math.min(255, Math.max(0, b));
             }
 
             const activeFilterFn = FILTERS[state.activeFilter];
             let bwIntensityFactor = state.bwIntensity / 100;
 
             for(let i = 0; i < totalLen; i += 4) {
-                let r = lutR[pixels[i]];
-                let g = lutG[pixels[i+1]];
-                let b = lutB[pixels[i+2]];
-
-                if (activeFilterFn) {
-                    [r, g, b] = activeFilterFn(r, g, b);
-                }
+                let r = lutR[pixels[i]], g = lutG[pixels[i+1]], b = lutB[pixels[i+2]];
+                if (activeFilterFn) [r, g, b] = activeFilterFn(r, g, b);
 
                 if (state.vibrance !== 0) {
-                    let max = Math.max(r, g, b);
-                    let avg = (r + g + b) / 3;
-                    let amt = Math.abs(max - avg) / 127;
+                    let max = Math.max(r, g, b), avg = (r + g + b) / 3, amt = Math.abs(max - avg) / 127;
                     let factor = (state.vibrance / 100) * (1.0 - amt) * 0.5;
-                    r += (max - r) * factor;
-                    g += (max - g) * factor;
-                    b += (max - b) * factor;
+                    r += (max - r) * factor; g += (max - g) * factor; b += (max - b) * factor;
                 }
-
                 if (state.saturation !== 0) {
-                    let lum = 0.299 * r + 0.587 * g + 0.114 * b;
-                    let satFactor = 1.0 + (state.saturation / 100);
-                    r = lum + (r - lum) * satFactor;
-                    g = lum + (g - lum) * satFactor;
-                    b = lum + (b - lum) * satFactor;
+                    let lum = 0.299 * r + 0.587 * g + 0.114 * b, satFactor = 1.0 + (state.saturation / 100);
+                    r = lum + (r - lum) * satFactor; g = lum + (g - lum) * satFactor; b = lum + (b - lum) * satFactor;
                 }
-
                 if (bwIntensityFactor > 0) {
                     let grey = 0.299 * r + 0.587 * g + 0.114 * b;
-                    r = r + (grey - r) * bwIntensityFactor;
-                    g = g + (grey - g) * bwIntensityFactor;
-                    b = b + (grey - b) * bwIntensityFactor;
+                    r = r + (grey - r) * bwIntensityFactor; g = g + (grey - g) * bwIntensityFactor; b = b + (grey - b) * bwIntensityFactor;
                 }
-
-                pixels[i]   = r > 255 ? 255 : (r < 0 ? 0 : r);
-                pixels[i+1] = g > 255 ? 255 : (g < 0 ? 0 : g);
-                pixels[i+2] = b > 255 ? 255 : (b < 0 ? 0 : b);
+                pixels[i] = r > 255 ? 255 : (r < 0 ? 0 : r); pixels[i+1] = g > 255 ? 255 : (g < 0 ? 0 : g); pixels[i+2] = b > 255 ? 255 : (b < 0 ? 0 : b);
             }
 
             if (state.sharpness > 0) {
-                let scratchContainer = mainCtx.createImageData(targetW, targetH);
-                let outPixels = scratchContainer.data;
-                let sharpWeight = (state.sharpness / 100) * 0.5;
-                
-                let kCenter = 1.0 + 4.0 * sharpWeight;
-                let kEdge = -sharpWeight;
-
+                let scratchContainer = mainCtx.createImageData(targetW, targetH), outPixels = scratchContainer.data, sharpWeight = (state.sharpness / 100) * 0.5;
+                let kCenter = 1.0 + 4.0 * sharpWeight, kEdge = -sharpWeight;
                 outPixels.set(pixels);
-
                 for (let y = 1; y < targetH - 1; y++) {
                     for (let x = 1; x < targetW - 1; x++) {
-                        let idx = (y * targetW + x) * 4;
-                        
-                        let top  = ((y - 1) * targetW + x) * 4;
-                        let btm  = ((y + 1) * targetW + x) * 4;
-                        let lft  = (y * targetW + (x - 1)) * 4;
-                        let rgt  = (y * targetW + (x + 1)) * 4;
-
+                        let idx = (y * targetW + x) * 4, top = ((y - 1) * targetW + x) * 4, btm = ((y + 1) * targetW + x) * 4, lft = (y * targetW + (x - 1)) * 4, rgt = (y * targetW + (x + 1)) * 4;
                         for (let c = 0; c < 3; c++) {
-                            let val = pixels[idx+c] * kCenter + 
-                                      (pixels[top+c] + pixels[btm+c] + pixels[lft+c] + pixels[rgt+c]) * kEdge;
+                            let val = pixels[idx+c] * kCenter + (pixels[top+c] + pixels[btm+c] + pixels[lft+c] + pixels[rgt+c]) * kEdge;
                             outPixels[idx+c] = val > 255 ? 255 : (val < 0 ? 0 : val);
                         }
                     }
@@ -1301,28 +1145,16 @@
             }
 
             mainCtx.putImageData(imgData, 0, 0);
-
             calculateLiveHistogram(imgData.data);
-
             isProcessing = false;
         }
 
-        // --- Multi-Channel Live Histogram Analysis Engine ---
-
         function calculateLiveHistogram(pixelArray) {
-            const rHist = new Uint32Array(256);
-            const gHist = new Uint32Array(256);
-            const bHist = new Uint32Array(256);
-            const lHist = new Uint32Array(256);
-
+            const rHist = new Uint32Array(256), gHist = new Uint32Array(256), bHist = new Uint32Array(256), lHist = new Uint32Array(256);
             let len = pixelArray.length;
             for(let i = 0; i < len; i += 4) {
-                let r = pixelArray[i];
-                let g = pixelArray[i+1];
-                let b = pixelArray[i+2];
-                let lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-
-                rHist[r]++; gHist[g]++; bHist[b]++; lHist[lum]++;
+                let r = pixelArray[i], g = pixelArray[i+1], b = pixelArray[i+2];
+                rHist[r]++; gHist[g]++; bHist[b]++; lHist[Math.round(0.299 * r + 0.587 * g + 0.114 * b)]++;
             }
 
             let maxCount = 0;
@@ -1333,11 +1165,9 @@
                 if(lHist[i] > maxCount) maxCount = lHist[i];
             }
 
-            // Updated: Dynamically scales to fill full width and top quarter of workspace
             const w = histogramCanvas.width = workspace.clientWidth;
             const h = histogramCanvas.height = workspace.clientHeight * 0.25;
             histCtx.clearRect(0, 0, w, h);
-
             histCtx.globalCompositeOperation = 'screen';
             
             drawHistogramChannelGraph(rHist, '#ff453a', maxCount, w, h);
@@ -1347,22 +1177,15 @@
         }
 
         function drawHistogramChannelGraph(data, color, maxVal, width, height, isDash = false) {
-            histCtx.beginPath();
-            histCtx.strokeStyle = color;
-            histCtx.lineWidth = isDash ? 1.5 : 1.0;
+            histCtx.beginPath(); histCtx.strokeStyle = color; histCtx.lineWidth = isDash ? 1.5 : 1.0;
             if(isDash) histCtx.setLineDash([2, 3]); else histCtx.setLineDash([]);
-            
             let scaleX = width / 256;
             for(let i = 0; i < 256; i++) {
-                let pct = data[i] / maxVal;
-                let yPos = height - (pct * (height - 4));
-                if(i === 0) histCtx.moveTo(0, yPos);
-                else histCtx.lineTo(i * scaleX, yPos);
+                let yPos = height - ((data[i] / maxVal) * (height - 4));
+                if(i === 0) histCtx.moveTo(0, yPos); else histCtx.lineTo(i * scaleX, yPos);
             }
             histCtx.stroke();
         }
-
-        // --- Parametric Custom Curves Editor Tool ---
 
         function setupCurvesInteraction() {
             document.querySelectorAll('[data-curve-channel]').forEach(btn => {
@@ -1376,17 +1199,13 @@
 
             document.getElementById('btn-reset-curve').addEventListener('click', () => {
                 state.curves[currentCurveChannel] = [[0,0], [255,255]];
-                pushHistoryState();
-                drawCurvesGraph();
-                requestRender();
+                pushHistoryState(); drawCurvesGraph(); requestRender();
             });
 
-            let isDraggingPoint = false;
-            let activePointIndex = -1;
+            let isDraggingPoint = false, activePointIndex = -1;
 
             curvesCanvasEl.addEventListener('touchstart', (e) => {
-                const rect = curvesCanvasEl.getBoundingClientRect();
-                const touch = e.touches[0];
+                const rect = curvesCanvasEl.getBoundingClientRect(), touch = e.touches[0];
                 const clickX = ((touch.clientX - rect.left) / rect.width) * 255;
                 const clickY = (1.0 - ((touch.clientY - rect.top) / rect.height)) * 255;
 
@@ -1394,8 +1213,7 @@
                 activePointIndex = pts.findIndex(pt => Math.hypot(pt[0] - clickX, pt[1] - clickY) < 22);
 
                 if(activePointIndex === -1 && pts.length < 8) {
-                    pts.push([clickX, clickY]);
-                    pts.sort((a,b) => a[0] - b[0]);
+                    pts.push([clickX, clickY]); pts.sort((a,b) => a[0] - b[0]);
                     activePointIndex = pts.findIndex(pt => pt[0] === clickX && pt[1] === clickY);
                 }
                 isDraggingPoint = true;
@@ -1403,242 +1221,123 @@
 
             curvesCanvasEl.addEventListener('touchmove', (e) => {
                 if(!isDraggingPoint || activePointIndex === -1) return;
-                const rect = curvesCanvasEl.getBoundingClientRect();
-                const touch = e.touches[0];
-                
-                let targetX = ((touch.clientX - rect.left) / rect.width) * 255;
-                let targetY = (1.0 - ((touch.clientY - rect.top) / rect.height)) * 255;
-
-                targetX = Math.min(255, Math.max(0, targetX));
-                targetY = Math.min(255, Math.max(0, targetY));
+                const rect = curvesCanvasEl.getBoundingClientRect(), touch = e.touches[0];
+                let targetX = Math.min(255, Math.max(0, ((touch.clientX - rect.left) / rect.width) * 255));
+                let targetY = Math.min(255, Math.max(0, (1.0 - ((touch.clientY - rect.top) / rect.height)) * 255));
 
                 let pts = state.curves[currentCurveChannel];
-                
                 if(activePointIndex === 0) targetX = 0;
                 if(activePointIndex === pts.length - 1) targetX = 255;
-
                 if(activePointIndex > 0 && targetX <= pts[activePointIndex-1][0]) targetX = pts[activePointIndex-1][0] + 1;
                 if(activePointIndex < pts.length - 1 && targetX >= pts[activePointIndex+1][0]) targetX = pts[activePointIndex+1][0] - 1;
 
                 pts[activePointIndex] = [targetX, targetY];
-                drawCurvesGraph();
-                requestRender();
+                drawCurvesGraph(); requestRender();
             });
 
-            curvesCanvasEl.addEventListener('touchend', () => {
-                if(isDraggingPoint) pushHistoryState();
-                isDraggingPoint = false;
-                activePointIndex = -1;
-            });
+            curvesCanvasEl.addEventListener('touchend', () => { if(isDraggingPoint) pushHistoryState(); isDraggingPoint = false; activePointIndex = -1; });
         }
 
         function drawCurvesGraph() {
-            const w = curvesCanvasEl.width = 140;
-            const h = curvesCanvasEl.height = 140;
-            curvesCtx.clearRect(0,0,w,h);
+            const w = curvesCanvasEl.width = 140, h = curvesCanvasEl.height = 140;
+            curvesCtx.clearRect(0,0,w,h); curvesCtx.strokeStyle = '#2c2c31'; curvesCtx.lineWidth = 1; curvesCtx.beginPath();
+            curvesCtx.moveTo(w/2, 0); curvesCtx.lineTo(w/2, h); curvesCtx.moveTo(0, h/2); curvesCtx.lineTo(w, h/2); curvesCtx.stroke();
 
-            curvesCtx.strokeStyle = '#2c2c31';
-            curvesCtx.lineWidth = 1;
-            curvesCtx.beginPath();
-            curvesCtx.moveTo(w/2, 0); curvesCtx.lineTo(w/2, h);
-            curvesCtx.moveTo(0, h/2); curvesCtx.lineTo(w, h/2);
-            curvesCtx.stroke();
-
-            let pts = state.curves[currentCurveChannel];
-            let splineMap = evaluateSplineLUT(pts);
-
-            curvesCtx.beginPath();
-            curvesCtx.lineWidth = 2;
-            
-            let colorMap = { rgb: '#ffffff', r: '#ff453a', g: '#30d158', b: '#0a84ff' };
-            curvesCtx.strokeStyle = colorMap[currentCurveChannel];
+            let pts = state.curves[currentCurveChannel], splineMap = evaluateSplineLUT(pts);
+            curvesCtx.beginPath(); curvesCtx.lineWidth = 2;
+            curvesCtx.strokeStyle = { rgb: '#ffffff', r: '#ff453a', g: '#30d158', b: '#0a84ff' }[currentCurveChannel];
 
             for(let i=0; i<256; i++) {
-                let xPos = (i / 255) * w;
-                let yPos = (1.0 - (splineMap[i] / 255)) * h;
-                if(i===0) curvesCtx.moveTo(xPos, yPos);
-                else curvesCtx.lineTo(xPos, yPos);
+                let xPos = (i / 255) * w, yPos = (1.0 - (splineMap[i] / 255)) * h;
+                if(i===0) curvesCtx.moveTo(xPos, yPos); else curvesCtx.lineTo(xPos, yPos);
             }
             curvesCtx.stroke();
 
-            pts.forEach((pt, idx) => {
-                let cx = (pt[0] / 255) * w;
-                let cy = (1.0 - (pt[1] / 255)) * h;
-                curvesCtx.fillStyle = '#ffffff';
-                curvesCtx.beginPath();
-                curvesCtx.arc(cx, cy, 4, 0, 2*Math.PI);
-                curvesCtx.fill();
-                curvesCtx.strokeStyle = '#0a84ff';
-                curvesCtx.lineWidth = 1.5;
-                curvesCtx.stroke();
+            pts.forEach((pt) => {
+                let cx = (pt[0] / 255) * w, cy = (1.0 - (pt[1] / 255)) * h;
+                curvesCtx.fillStyle = '#ffffff'; curvesCtx.beginPath(); curvesCtx.arc(cx, cy, 4, 0, 2*Math.PI); curvesCtx.fill();
+                curvesCtx.strokeStyle = '#0a84ff'; curvesCtx.lineWidth = 1.5; curvesCtx.stroke();
             });
         }
 
         function evaluateSplineLUT(points) {
             let lut = new Uint8Array(256);
             for (let i = 0; i < 256; i++) {
-                let j = 0;
-                while (j < points.length - 1 && points[j+1][0] < i) { j++; }
-                
-                let p1 = points[j];
-                let p2 = points[j+1];
-                
-                let ratio = (i - p1[0]) / (p2[0] - p1[0]);
-                let val = p1[1] + ratio * (p2[1] - p1[1]);
-                lut[i] = Math.min(255, Math.max(0, Math.round(val)));
+                let j = 0; while (j < points.length - 1 && points[j+1][0] < i) { j++; }
+                let ratio = (i - points[j][0]) / (points[j+1][0] - points[j][0]);
+                lut[i] = Math.min(255, Math.max(0, Math.round(points[j][1] + ratio * (points[j+1][1] - points[j][1]))));
             }
             return lut;
         }
 
-        // --- Custom Image Slicing Crop Transformations System ---
-
         function evalCropOverlayVisualVisibility() {
             const overlay = document.getElementById('crop-overlay');
             const activeDockItem = document.querySelector('#main-dock .dock-item.active');
-            
             if(!originalImage || !activeDockItem || activeDockItem.dataset.panel !== 'panel-transform' || document.querySelector('.sub-tab-btn.active').dataset.target !== 'trans-sub-crop') {
-                overlay.style.display = 'none';
-                return;
+                overlay.style.display = 'none'; return;
             }
 
-            const canvasRect = mainCanvas.getBoundingClientRect();
-            const workspaceRect = workspace.getBoundingClientRect();
-
-            let targetLeft = canvasRect.left - workspaceRect.left;
-            let targetTop = canvasRect.top - workspaceRect.top;
-            let targetWidth = canvasRect.width;
-            let targetHeight = canvasRect.height;
+            const canvasRect = mainCanvas.getBoundingClientRect(), workspaceRect = workspace.getBoundingClientRect();
+            let targetLeft = canvasRect.left - workspaceRect.left, targetTop = canvasRect.top - workspaceRect.top;
+            let targetWidth = canvasRect.width, targetHeight = canvasRect.height;
 
             if (state.cropRatio === '1:1') {
-                let size = Math.min(targetWidth, targetHeight);
-                targetLeft += (targetWidth - size)/2; targetTop += (targetHeight - size)/2;
-                targetWidth = size; targetHeight = size;
-            } else if (state.cropRatio === '4:3') {
-                let targetAspect = 4/3;
-                let w = targetWidth; let h = w / targetAspect;
-                if (h > targetHeight) { h = targetHeight; w = h * targetAspect; }
-                targetLeft += (canvasRect.width - w)/2; targetTop += (canvasRect.height - h)/2;
-                targetWidth = w; targetHeight = h;
-            } else if (state.cropRatio === '16:9') {
-                let targetAspect = 16/9;
-                let w = targetWidth; let h = w / targetAspect;
-                if (h > targetHeight) { h = targetHeight; w = h * targetAspect; }
-                targetLeft += (canvasRect.width - w)/2; targetTop += (canvasRect.height - h)/2;
-                targetWidth = w; targetHeight = h;
+                let size = Math.min(targetWidth, targetHeight); targetLeft += (targetWidth - size)/2; targetTop += (targetHeight - size)/2; targetWidth = size; targetHeight = size;
+            } else if (state.cropRatio === '4:3' || state.cropRatio === '16:9') {
+                let aspect = state.cropRatio === '4:3' ? 4/3 : 16/9, w = targetWidth, h = w / aspect;
+                if (h > targetHeight) { h = targetHeight; w = h * aspect; }
+                targetLeft += (canvasRect.width - w)/2; targetTop += (canvasRect.height - h)/2; targetWidth = w; targetHeight = h;
             }
-
-            overlay.style.left = `${targetLeft}px`;
-            overlay.style.top = `${targetTop}px`;
-            overlay.style.width = `${targetWidth}px`;
-            overlay.style.height = `${targetHeight}px`;
-            overlay.style.display = 'block';
+            overlay.style.left = `${targetLeft}px`; overlay.style.top = `${targetTop}px`; overlay.style.width = `${targetWidth}px`; overlay.style.height = `${targetHeight}px`; overlay.style.display = 'block';
         }
 
         function executeCropSlicingTransformation() {
             if(!originalImage) return;
-
-            const canvasRect = mainCanvas.getBoundingClientRect();
-            const overlayRect = document.getElementById('crop-overlay').getBoundingClientRect();
-
-            let scaleFactorX = mainCanvas.width / canvasRect.width;
-            let scaleFactorY = mainCanvas.height / canvasRect.height;
-
-            let cropX = (overlayRect.left - canvasRect.left) * scaleFactorX;
-            let cropY = (overlayRect.top - canvasRect.top) * scaleFactorY;
-            let cropW = overlayRect.width * scaleFactorX;
-            let cropH = overlayRect.height * scaleFactorY;
-
-            cropX = Math.max(0, cropX); cropY = Math.max(0, cropY);
-            cropW = Math.min(mainCanvas.width - cropX, cropW);
-            cropH = Math.min(mainCanvas.height - cropY, cropH);
+            const canvasRect = mainCanvas.getBoundingClientRect(), overlayRect = document.getElementById('crop-overlay').getBoundingClientRect();
+            let scaleX = mainCanvas.width / canvasRect.width, scaleY = mainCanvas.height / canvasRect.height;
+            let cropX = Math.max(0, (overlayRect.left - canvasRect.left) * scaleX), cropY = Math.max(0, (overlayRect.top - canvasRect.top) * scaleY);
+            let cropW = Math.min(mainCanvas.width - cropX, overlayRect.width * scaleX), cropH = Math.min(mainCanvas.height - cropY, overlayRect.height * scaleY);
 
             if(cropW < 10 || cropH < 10) return;
-
-            const cropCanvas = document.createElement('canvas');
-            cropCanvas.width = cropW;
-            cropCanvas.height = cropH;
-            const cropCtx = cropCanvas.getContext('2d');
-            
-            cropCtx.drawImage(mainCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+            const cropCanvas = document.createElement('canvas'); cropCanvas.width = cropW; cropCanvas.height = cropH;
+            cropCanvas.getContext('2d').drawImage(mainCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
             const croppedImg = new Image();
             croppedImg.onload = function() {
-                originalImage = croppedImg;
-                resetStateToDefaults();
-                historyStack = [];
-                historyIndex = -1;
-                pushHistoryState();
-                resetViewportPositioning();
-                requestRender();
+                originalImage = croppedImg; resetStateToDefaults(); historyStack = []; historyIndex = -1; pushHistoryState(); executeCoreRenderPipeline(); resetViewportPositioning();
             };
             croppedImg.src = cropCanvas.toDataURL('image/png');
         }
 
-        // --- Efficient Undo / Redo Pipeline State Engine System ---
-
         function pushHistoryState() {
-            if(historyIndex < historyStack.length - 1) {
-                historyStack = historyStack.slice(0, historyIndex + 1);
-            }
-
-            const stateSnapshotStr = JSON.stringify(state);
-            
-            if(historyStack.length >= 30) { historyStack.shift(); }
-
-            historyStack.push(stateSnapshotStr);
-            historyIndex = historyStack.length - 1;
+            if(historyIndex < historyStack.length - 1) historyStack = historyStack.slice(0, historyIndex + 1);
+            if(historyStack.length >= 30) historyStack.shift();
+            historyStack.push(JSON.stringify(state)); historyIndex = historyStack.length - 1;
             evaluateHistoryButtonsStates();
         }
 
         function handleUndo() {
-            if(historyIndex <= 0) return;
-            historyIndex--;
-            state = JSON.parse(historyStack[historyIndex]);
-            syncSlidersUIFromCurrentState();
-            evaluateHistoryButtonsStates();
-            requestRender();
+            if(historyIndex <= 0) return; historyIndex--; state = JSON.parse(historyStack[historyIndex]);
+            syncSlidersUIFromCurrentState(); evaluateHistoryButtonsStates(); requestRender();
         }
 
         function handleRedo() {
-            if(historyIndex >= historyStack.length - 1) return;
-            historyIndex++;
-            state = JSON.parse(historyStack[historyIndex]);
-            syncSlidersUIFromCurrentState();
-            evaluateHistoryButtonsStates();
-            requestRender();
+            if(historyIndex >= historyStack.length - 1) return; historyIndex++; state = JSON.parse(historyStack[historyIndex]);
+            syncSlidersUIFromCurrentState(); evaluateHistoryButtonsStates(); requestRender();
         }
 
-        function handleRevertAll() {
-            if(!originalImage) return;
-            resetStateToDefaults();
-            pushHistoryState();
-            requestRender();
-        }
-
+        function handleRevertAll() { if(!originalImage) return; resetStateToDefaults(); pushHistoryState(); requestRender(); }
         function evaluateHistoryButtonsStates() {
             document.getElementById('btn-undo').disabled = (historyIndex <= 0);
             document.getElementById('btn-redo').disabled = (historyIndex >= historyStack.length - 1);
         }
 
-        // --- Compressed High Quality File Export Downloader Output Subsystems ---
-
         function executeImageDownloadExport() {
             if(!originalImage) return;
-
-            let isPng = document.getElementById('btn-fmt-png').classList.contains('active');
-            let mimeType = isPng ? 'image/png' : 'image/jpeg';
-            let qualityScore = parseFloat(document.getElementById('sld-exportQuality').value) / 100;
-
-            let dataUrl = mainCanvas.toDataURL(mimeType, isPng ? undefined : qualityScore);
-            
-            let downloadAnchor = document.createElement('a');
-            downloadAnchor.download = `PhotoLab_${Date.now()}.${isPng ? 'png' : 'jpg'}`;
-            downloadAnchor.href = dataUrl;
-            
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            document.body.removeChild(downloadAnchor);
-
+            let isPng = document.getElementById('btn-fmt-png').classList.contains('active'), mime = isPng ? 'image/png' : 'image/jpeg';
+            let dl = document.createElement('a'); dl.download = `PhotoLab_${Date.now()}.${isPng ? 'png' : 'jpg'}`;
+            dl.href = mainCanvas.toDataURL(mime, isPng ? undefined : parseFloat(document.getElementById('sld-exportQuality').value) / 100);
+            document.body.appendChild(dl); dl.click(); document.body.removeChild(dl);
             document.getElementById('export-modal').style.display = 'none';
         }
     </script>
