@@ -41,16 +41,6 @@
             padding-top: var(--safe-area-top);
         }
 
-        /* Splash Screen Overlay */
-        #splash-screen {
-            position: fixed;
-            inset: 0;
-            background: #0a0a0c url('PhotoLab_bck.png') no-repeat center center / cover;
-            z-index: 9999;
-            transition: opacity 0.5s ease-in-out;
-            pointer-events: none; /* מונע אינטראקציה בזמן שהוא מוצג */
-        }
-
         /* Top Header */
         header {
             height: 54px;
@@ -242,7 +232,7 @@
             outline: none;
         }
 
-        input[type="range"]::-webkit-slider-runnable-track {
+        input[type="range"]::-webkit-slider-run runnable-track {
             width: 100%;
             height: 4px;
             background: var(--bg-tertiary);
@@ -403,7 +393,7 @@
         .crop-grid-line-h { left: 0; right: 0; height: 1px; }
         .crop-grid-line-v { top: 0; bottom: 0; width: 1px; }
 
-        /* Empty State */
+        /* Empty State & Splash Integration */
         #empty-state {
             position: absolute;
             inset: 0;
@@ -414,19 +404,68 @@
             padding: 32px;
             text-align: center;
             z-index: 6;
-            /* שכבת גרדיאנט כהה מעל תמונת הרקע כדי לשמור על קריאות כפתורי הממשק והטקסט */
-            background: linear-gradient(rgba(10, 10, 12, 0.75), rgba(10, 10, 12, 0.75)), url('PhotoLab_bck.png') no-repeat center center / cover;
+            /* מצב בחירת תמונה: שקיפות כמעט מלאה של 85% (0.15 אטימות של השכבה הכהה) */
+            background: linear-gradient(rgba(10, 10, 12, 0.15), rgba(10, 10, 12, 0.15)), url('PhotoLab_bck.png') no-repeat center center / cover;
+            transition: background 0.8s ease-in-out;
         }
+        
+        /* מצב מסך פתיחה: שכבת כהות זמנית עמוקה יותר לקריאות הטקסט הלבן */
+        #empty-state.splash-active {
+            background: linear-gradient(rgba(10, 10, 12, 0.5), rgba(10, 10, 12, 0.5)), url('PhotoLab_bck.png') no-repeat center center / cover;
+        }
+
+        #splash-title {
+            position: absolute;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffffff;
+            font-weight: 800;
+            white-space: nowrap;
+            letter-spacing: -2px;
+            z-index: 7;
+            transition: top 0.8s cubic-bezier(0.25, 1, 0.5, 1), font-size 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* מיקום וגודל בשלוש השניות הראשונות */
+        #empty-state.splash-active #splash-title {
+            top: 50%;
+            font-size: 20vh; /* גודל של חמישית מסך */
+        }
+
+        /* מיקום וגודל לאחר שלוש שניות */
+        #empty-state:not(.splash-active) #splash-title {
+            top: 33.33%; /* שליש עליון של המסך */
+            font-size: 8vh;
+        }
+
+        .empty-state-content {
+            position: absolute;
+            top: 65%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            max-width: 400px;
+            padding: 0 24px;
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+            opacity: 1;
+        }
+
+        #empty-state.splash-active .empty-state-content {
+            opacity: 0;
+            transform: translate(-50%, -30%);
+            pointer-events: none;
+        }
+
         .upload-circle {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 16px;
+            margin: 0 auto 16px auto;
             color: var(--accent);
         }
 
@@ -458,8 +497,6 @@
     </style>
 </head>
 <body>
-
-    <div id="splash-screen"></div>
 
     <header>
         <div class="header-actions">
@@ -495,15 +532,19 @@
             <canvas id="mainCanvas"></canvas>
         </div>
 
-        <div id="empty-state">
-            <div class="upload-circle">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            </div>
-            <h2 style="font-size: 18px; margin-bottom: 8px;">No Image Loaded</h2>
-            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">Import a photograph from your device library or active camera lens to begin processing.</p>
-            <div style="display: flex; gap: 12px;">
-                <button class="btn-primary" style="padding: 10px 20px;" onclick="document.getElementById('file-input-gallery').click()">Gallery</button>
-                <button class="btn-primary" style="padding: 10px 20px; background: #34c759;" onclick="document.getElementById('file-input-camera').click()">Camera</button>
+        <div id="empty-state" class="splash-active">
+            <div id="splash-title">PhotoLab</div>
+            
+            <div class="empty-state-content">
+                <div class="upload-circle">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <h2 style="font-size: 18px; margin-bottom: 8px;">No Image Loaded</h2>
+                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">Import a photograph from your device library or active camera lens to begin processing.</p>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button class="btn-primary" style="padding: 10px 20px;" onclick="document.getElementById('file-input-gallery').click()">Gallery</button>
+                    <button class="btn-primary" style="padding: 10px 20px; background: #34c759;" onclick="document.getElementById('file-input-camera').click()">Camera</button>
+                </div>
             </div>
         </div>
     </div>
@@ -664,7 +705,7 @@
         </div>
 
         <nav id="main-dock">
-            <div class="dock-item active" data-panel="panel-adjust">
+            <div class="dock-item" data-panel="panel-adjust">
                 <svg viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 4v16c4.418 0 8-3.582 8-8s-3.582-8-8-8z"/></svg>
                 Adjust
             </div>
@@ -772,26 +813,32 @@
             setupCurvesInteraction();
             pushHistoryState();
 
-            // טיימר ייעודי להעלמת מסך הפתיחה לאחר 3 שניות (3000 מילישניות)
+            // טיימר של 3 שניות (3000ms) להעלמת מצב הפתיחה והעלאת הלוגו למעלה
             setTimeout(() => {
-                const splash = document.getElementById('splash-screen');
-                if (splash) {
-                    splash.style.opacity = '0';
-                    // הסרה מלאה מה-DOM לאחר סיום האנימציה
-                    setTimeout(() => splash.remove(), 500);
+                if (emptyState) {
+                    emptyState.classList.remove('splash-active');
                 }
             }, 3000);
         });
 
         function initUI() {
+            // ניהול תפריט תחתון דו-מצבי (Toggle)
             document.querySelectorAll('#main-dock .dock-item').forEach(item => {
                 item.addEventListener('click', () => {
+                    const isAlreadyActive = item.classList.contains('active');
+                    
+                    // איפוס גורף של כל המקשים והתפריטים
                     document.querySelectorAll('#main-dock .dock-item').forEach(i => i.classList.remove('active'));
                     document.querySelectorAll('.context-menu').forEach(m => m.classList.remove('active'));
-                    item.classList.add('active');
-                    const targetMenu = document.getElementById(item.dataset.panel);
-                    if(targetMenu) targetMenu.classList.add('active');
-                    if(item.dataset.panel === 'panel-curves') drawCurvesGraph();
+                    
+                    // אם המקש לא היה פעיל - נפתח אותו כעת. אם היה פעיל - הוא פשוט ייסגר (ייעלם חזרה)
+                    if (!isAlreadyActive) {
+                        item.classList.add('active');
+                        const targetMenu = document.getElementById(item.dataset.panel);
+                        if(targetMenu) targetMenu.classList.add('active');
+                        if(item.dataset.panel === 'panel-curves') drawCurvesGraph();
+                    }
+                    
                     evalCropOverlayVisualVisibility();
                 });
             });
@@ -845,7 +892,6 @@
             document.getElementById('btn-export-cancel').addEventListener('click', () => {
                 document.getElementById('export-modal').style.display = 'none';
             });
-            document.getElementById('btn-export-confirm').addEventListener('executeImageDownloadExport', executeImageDownloadExport);
             document.getElementById('btn-export-confirm').addEventListener('click', executeImageDownloadExport);
 
             let fmtJpeg = document.getElementById('btn-fmt-jpeg');
@@ -956,6 +1002,11 @@
                 originalImage.onload = function() {
                     emptyState.style.display = 'none';
                     document.getElementById('histogram-container').style.display = 'block';
+                    
+                    // איפוס פאנלים תחתונים כדי שלא יישאר פאנל פתוח בטעות מתמונה קודמת
+                    document.querySelectorAll('#main-dock .dock-item').forEach(i => i.classList.remove('active'));
+                    document.querySelectorAll('.context-menu').forEach(m => m.classList.remove('active'));
+
                     resetStateToDefaults();
                     historyStack = [];
                     historyIndex = -1;
@@ -1288,7 +1339,7 @@
         function evalCropOverlayVisualVisibility() {
             const overlay = document.getElementById('crop-overlay');
             const activeDockItem = document.querySelector('#main-dock .dock-item.active');
-            if(!originalImage || !activeDockItem || activeDockItem.dataset.panel !== 'panel-transform' || document.querySelector('.sub-tab-btn.active').dataset.target !== 'trans-sub-crop') {
+            if(!originalImage || !activeDockItem || activeDockItem.dataset.panel !== 'panel-transform' || !document.querySelector('.sub-tab-btn.active') || document.querySelector('.sub-tab-btn.active').dataset.target !== 'trans-sub-crop') {
                 overlay.style.display = 'none'; return;
             }
 
